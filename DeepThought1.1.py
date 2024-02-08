@@ -2,6 +2,7 @@ import pandas as pd
 import itertools
 import tkinter as tk
 from tkinter import ttk, filedialog
+import datetime
 
 
 class Screen:
@@ -62,6 +63,7 @@ class Screen:
         file_path_template_csv = filedialog.askopenfilename(title="Select a CSV File", filetypes=[('CSV files', '*.csv')])
         if file_path_template_csv:
             dataframe = pd.read_csv(file_path_template_csv)
+
         return cls(
             dataframe=dataframe,
             PFD_dwell=cls.PFD_dwell,
@@ -79,10 +81,10 @@ class Screen:
                     f"Error: Missing one or more required attributes: {', '.join(required_attributes)}. Did you load variables?")
 
             def append_coordinates():
-                coordinates = []
+                coords = []
                 for i in self.dataframe.index:
-                    coordinates.append((self.dataframe.x[i], self.dataframe.y[i]))
-                self.dataframe['coordinates'] = coordinates
+                    coords.append((self.dataframe.x[i], self.dataframe.y[i]))
+                self.dataframe['coordinates'] = coords
 
             append_coordinates()
 
@@ -91,8 +93,9 @@ class Screen:
             columns = list(map(str, self.dataframe.plate_column.tolist()))
             rows = self.dataframe.plate_row.tolist()
             coordinates = self.dataframe.coordinates.tolist()
-            wells_coords = [(r + c, (coord)) for r, c, coord in zip(rows, columns, coordinates)]
+            wells_coords = [(r + c, coord) for r, c, coord in zip(rows, columns, coordinates)]
             names = self.dataframe.chemical_name.tolist()
+
             word_fragments_to_remove = ['trace', 'wash', 'mark', 'rinse', 'pfd', 'perfluorodecalin', 'oil']  # Omits tracer, carrier fluid, and wash wells from being included in screen combos
             mask = self.dataframe['class'].str.lower().str.contains('|'.join(word_fragments_to_remove))
             elements_to_remove = self.dataframe.loc[mask, 'class'].str.lower().tolist()
@@ -101,15 +104,11 @@ class Screen:
 
             components = self.clas  # list of all the individual types of reagent classes
 
-            components_coords = [
-                [w for w in wells_coords if self.dataframe.loc[wells_coords.index(w), 'class'] == c] for c in components
-            ]
+            components_coords = [[w for w in wells_coords if self.dataframe.loc[wells_coords.index(w), 'class'] == c] for c in components]
             self.combinations = list(itertools.product(*components_coords))  # list of all the combinations
 
-            wells_names = [(r + c, (name)) for r, c, name in zip(rows, columns, names)]
-            components_names = [
-                [w for w in wells_names if self.dataframe.loc[wells_names.index(w), 'class'] == c] for c in components
-            ]
+            wells_names = [(r + c, name) for r, c, name in zip(rows, columns, names)]
+            components_names = [[w for w in wells_names if self.dataframe.loc[wells_names.index(w), 'class'] == c] for c in components]
             self.combinations_names = list(itertools.product(*components_names))
 
             tracer_entry = self.dataframe.loc[self.dataframe['class'].str.lower().str.contains('trace|mark')]
@@ -125,7 +124,6 @@ class Screen:
             PFD_entry = self.dataframe.loc[self.dataframe['class'].str.lower().str.contains('pfd|perfluorodecalin|oil')]
             if not PFD_entry.empty:
                 self.PFD_well_coordinates = tuple(PFD_entry[['x' , 'y']].values[0])
-
 
         except AttributeError as e:
             print(e)
@@ -157,9 +155,13 @@ class Screen:
 
             file_path_save_gcode = filedialog.asksaveasfilename(title="Select a path to save",
                                                                 filetypes=[('Text files', '*.txt')])
+            date_created = datetime.date.today().strftime('%b-%d-%Y')
+            directory_with_file , extension = file_path_save_gcode.split("." , 1)
+            gcode_file_path = (f"{directory_with_file} {date_created}.{extension}")
+
             try:
-                if file_path_save_gcode:
-                    with open(file_path_save_gcode, 'w') as file:
+                if gcode_file_path:
+                    with open(gcode_file_path, 'w') as file:
                         for i in range(len(self.combinations)):  # for every combination
                             for j in range(self.repeats):  # range of repeats you want to make
                                sample_well(self.PFD_well_coordinates[0], self.PFD_well_coordinates[1], self.PFD_dwell, self.pause_after_pump_stop, self.feedrate) # Sample carrier fluid
@@ -185,8 +187,7 @@ class Screen:
         required_attributes = ['combinations_names', 'clas']
         try:
             if any(getattr(self, attr, None) is None for attr in required_attributes):
-                raise AttributeError(
-                    f"Error: One or more required attributes does not exist: {', '.join(required_attributes)}. Did you upload a well plate template and initialize the screen?")
+                raise AttributeError(f"Error: One or more required attributes does not exist: {', '.join(required_attributes)}. Did you upload a well plate template and initialize the screen?")
             df_combinations = pd.DataFrame(self.combinations_names, columns=self.clas)
             df_combinations = df_combinations.loc[df_combinations.index.repeat(3)].reset_index(drop=True)  # repeats the index a certain number of times to match the number of times you want to form a reaction
             df_combinations.index += 1
@@ -194,16 +195,19 @@ class Screen:
             df_combinations[column_names] = df_combinations.apply(lambda x: tuple([val[1] for val in x]))  # drops the well number associated with a reagent in each cell
             rxn_num = [a + 1 for a in range(len(df_combinations.index))]
             df_combinations.insert(0, 'reaction #', rxn_num)
-            file_path_save_vizualization = filedialog.asksaveasfilename(title = "Select a path to save",
-                                                                             filetypes=[('CSV file', '*.csv')])
+            file_path_save_vizualization = filedialog.asksaveasfilename(title = "Select a path to save", filetypes=[('CSV file', '*.csv')])
             try:
                 if file_path_save_vizualization:
-                    df_combinations.to_csv(file_path_save_vizualization)
+                    date_created = datetime.date.today().strftime('%b-%d-%Y')
+                    directory_with_file, extension = file_path_save_vizualization.split(".", 1)
+                    visualization_file_path = (f"{directory_with_file} {date_created}.{extension}")
+                    df_combinations.to_csv(visualization_file_path)
             except:
                 print('No Save File Path Given')
 
         except AttributeError as e:
             print(e)
+
 
 """I can no longer sit back and allow Communist infiltration, Communist indoctrination, 
 Communist subversion, and the international Communist conspiracy 
@@ -240,5 +244,3 @@ to sap and impurify all of our precious bodily fluids. –Brig. Gen. Jack D. Rip
 #      /__//__/.
 #    .'    '.   '.
 #   (_kOs____)____)
-
-
