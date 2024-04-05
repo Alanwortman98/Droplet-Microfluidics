@@ -1,0 +1,13 @@
+Metadata-Version: 2.1
+Name: deepthought
+Version: 0.1.2
+Summary: Reaction automation using droplet microfluidics
+Home-page: https://github.com/Alanwortman98/Droplet-Microfluidics
+Author: Alan K. Wortman
+Author-email: alanwortman98@gmail.com
+License: MIT
+Keywords: Droplet Microfluidics,Chemical Reaction Optimization,Reaction Automation
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Science/Research
+Classifier: Topic :: Scientific/Engineering :: Chemistry
+Classifier: Programming Language :: Python :: 3.11

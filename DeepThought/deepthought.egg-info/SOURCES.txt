@@ -1,0 +1,8 @@
+setup.py
+deepthought/__init__.py
+deepthought/optimize.py
+deepthought.egg-info/PKG-INFO
+deepthought.egg-info/SOURCES.txt
+deepthought.egg-info/dependency_links.txt
+deepthought.egg-info/requires.txt
+deepthought.egg-info/top_level.txt
